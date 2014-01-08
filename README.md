@@ -1,4 +1,0 @@
-CalSync
-=======
-
-Outlook calendar synchronization
