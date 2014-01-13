@@ -21,9 +21,11 @@ namespace CalSync.Synchronize
         /// <param name="endDate">the end of the date range</param>
         internal static void SendSynchronizationMessage(MAPIFolder calendar, DateTime startDate, DateTime endDate, String remoteEmailAddress, String emailSubject)
         {
+            string outputFile = Path.GetTempPath() + "calsync.ics";
             // send sync message to remote email address
             var calendarEvents = ReadOutlookCalendarEvents(calendar, startDate, endDate);
-            var syncMessage = CreateSyncEmailMessage(calendarEvents);
+            var eventsToSync = calendarEvents.Where(e => !(e.IsAllDay || e.Summary == "Busy"));
+            var syncMessage = CreateSynchronizationMessage(eventsToSync, outputFile);
             if (syncMessage != null)
             {
                 syncMessage.To = remoteEmailAddress;
@@ -32,10 +34,10 @@ namespace CalSync.Synchronize
                 syncMessage.Send();
             }
 
-            // delete the sent message so we don't clutter the local user's account.
+            // delete the sent/deleted messages so we don't clutter the local user's account.
             var deleteRule = String.Format("[Subject] = '{0}'", emailSubject);
-            Program.Outlook.Session.GetDefaultFolder(OlDefaultFolders.olFolderSentMail).Items.Restrict(deleteRule).Cast<MailItem>().ToList().ForEach(deleted => deleted.Delete());
-            Program.Outlook.Session.GetDefaultFolder(OlDefaultFolders.olFolderDeletedItems).Items.Restrict(deleteRule).Cast<MailItem>().ToList().ForEach(deleted => deleted.Delete());
+            DeleteMessages(OlDefaultFolders.olFolderSentMail, deleteRule);
+            DeleteMessages(OlDefaultFolders.olFolderDeletedItems, deleteRule);
         }
 
         /// <summary>
@@ -67,8 +69,7 @@ namespace CalSync.Synchronize
             exporter.SaveAsICal(tempFile);
 
             // ..and read it back in
-            IICalendarCollection calendars = iCalendar.LoadFromFile(tempFile);
-            var events = calendars.SelectMany(c => c.Events);
+            var events = ReadCalendarExport(tempFile);
             File.Delete(tempFile);
 
             return events;
@@ -77,33 +78,55 @@ namespace CalSync.Synchronize
         /// <summary>
         /// Create an email message with an ical attachment of calendar events
         /// </summary>
-        /// <returns>a list of calendar events</returns>
+        /// <param name="outputFile">the filename to read</param>
         /// <returns>The synchronization email message</returns>
-        private static MailItem CreateSyncEmailMessage(IEnumerable<IEvent> events)
+        private static MailItem CreateSynchronizationMessage(IEnumerable<IEvent> events, String outputFile)
         {
-            var eventsToSync = events.Where(e => !(e.IsAllDay || e.Summary == "Busy"));
-
             MailItem mail = null;
-            if (eventsToSync.Count() != 0)
+            if (events.Count() != 0)
             {
                 // create an iCal file, blanking out each event's Subject to a generic 'Busy' message
                 iCalendar target = new iCalendar();
-                foreach (var appt in eventsToSync)
+                foreach (var e in events)
                 {
-                    appt.Summary = "Busy"; 
-                    target.Events.Add(appt);
+                    e.Summary = "Busy"; 
+                    target.Events.Add(e);
                 }
-                var serializer = new iCalendarSerializer();
-                var tempFile = Path.GetTempFileName() + ".ics";
-                serializer.Serialize(target, tempFile);
 
-                // create the email message with the ical file as an attachment
-                mail = Program.Outlook.CreateItem(OlItemType.olMailItem) as MailItem;
-                mail.Attachments.Add(tempFile, OlAttachmentType.olByValue);
-                File.Delete(tempFile);
+                // get the previous run's output. only bother creating a synchronization message if we have new information
+                var oldCalendar = ReadCalendarExport(outputFile);
+                if (!oldCalendar.SequenceEqual(target.Events))
+                {
+                    var serializer = new iCalendarSerializer();
+                    serializer.Serialize(target, outputFile);
+
+                    // create the email message with the ical file as an attachment
+                    mail = Program.Outlook.CreateItem(OlItemType.olMailItem) as MailItem;
+                    mail.Attachments.Add(outputFile, OlAttachmentType.olByValue);
+                }
             }
 
             return mail;
+        }
+
+        /// <summary>
+        /// Read and parse an ICal file
+        /// </summary>
+        /// <param name="icalFile"></param>
+        /// <returns></returns>
+        private static IEnumerable<IEvent> ReadCalendarExport(String icalFile)
+        {
+            return File.Exists(icalFile) ? iCalendar.LoadFromFile(icalFile).SelectMany(c => c.Events) : new List<IEvent>();
+        }
+
+        /// <summary>
+        /// Delete email messages that match a given rule
+        /// </summary>
+        /// <param name="folder">The folder in which to delete messages</param>
+        /// <param name="deleteRule">The rule specifying which messages to delete</param>
+        private static void DeleteMessages(OlDefaultFolders folder, string deleteRule)
+        {
+            Program.Outlook.Session.GetDefaultFolder(folder).Items.Restrict(deleteRule).Cast<MailItem>().ToList().ForEach(deleted => deleted.Delete());
         }
     }
 }
