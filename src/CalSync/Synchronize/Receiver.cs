@@ -14,25 +14,28 @@ namespace CalSync.Synchronize
         private const String CalendarItemCategory = "[Calendar Sync]";
 
         /// <summary>
-        /// Given a folder of email messages with ical attachments, add the appointments from the ical attachments
-        /// to the provided calendar.
+        /// Given a folder of email messages with ical attachments, synchronize the appointments in the ical attachments with the provided calendar
         /// </summary>
+        /// <param name="calendar">the local calendar to sync appointments to</param>
+        /// <param name="startDate">the start date of the synchronization range</param>
+        /// <param name="endDate">the end date of the synchronization range</param>
         /// <param name="messageFolder">the folder that contains the email messages</param>
-        /// <param name="calendar">the calendar to add appointments to</param>
-        internal static void ProcessReceivedMessages(MAPIFolder messageFolder, MAPIFolder calendar)
+        internal static void ProcessReceivedMessages(MAPIFolder calendar, DateTime startDate, DateTime endDate, MAPIFolder messageFolder)
         {
             // read emails from outlook
             var pendingMessages = messageFolder.Items.OfType<MailItem>();
 
-            // determine the calendar items we need to add
-            var newItems = ConvertEmailMessagesToCalendarItems(pendingMessages);
-            if (!newItems.Any())
+            // determine the calendar items we need to add and delete to/from the local calendar
+            var remoteItems = ConvertEmailMessagesToCalendarItems(pendingMessages);
+            if (!remoteItems.Any())
                 return;
-            var existingItems = GetSynchronizedCalendarItems(calendar, newItems.Min(e => e.Start), newItems.Max(e => e.End));
-            var itemsToAdd = newItems.Except(existingItems, new AppointmentItemComparer());
+            var localItems = GetSynchronizedCalendarItems(calendar, startDate, endDate);
+            var itemsToAdd = remoteItems.Except(localItems, new AppointmentItemComparer()).ToList();
+            var itemsToDelete = localItems.Except(remoteItems, new AppointmentItemComparer()).ToList();
 
-            // save these items to the outlook calendar
-            itemsToAdd.ToList().ForEach(evt => evt.Save());
+            // make changes to the outlook calendar
+            itemsToAdd.ForEach(evt => evt.Save());
+            itemsToDelete.ForEach(evt => evt.Delete());
 
             // cleanup processed messages
             pendingMessages.ToList().ForEach(msg => msg.Delete());

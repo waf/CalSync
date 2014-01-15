@@ -43,8 +43,8 @@ namespace CalSync
             var rangeEnd = rangeStart.AddDays(cfg.SyncRangeDays);
             Sender.SendSynchronizationMessage(calendar, rangeStart, rangeEnd, cfg.TargetEmailAddress, EmailSubject);
 
-            // read events from the local sync folder, and add them to the calendar
-            Receiver.ProcessReceivedMessages(setup.SyncFolder, calendar);
+            // synchronize the calendar with messages in the local sync folder
+            Receiver.ProcessReceivedMessages(calendar, rangeStart, rangeEnd, setup.SyncFolder);
         }
     }
 }
