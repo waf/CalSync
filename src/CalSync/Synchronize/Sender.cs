@@ -23,7 +23,7 @@ namespace CalSync.Synchronize
             string outputFile = Path.GetTempPath() + "calsync.ics";
             // send sync message to remote email address
             var calendarEvents = ReadOutlookCalendarEvents(calendar, startDate, endDate);
-            var eventsToSync = calendarEvents.Where(e => !(e.IsAllDay || e.Summary == "Busy"));
+            var eventsToSync = FilterCalendarEvents(calendarEvents);
             var syncMessage = CreateSynchronizationMessage(eventsToSync, outputFile);
             if (syncMessage != null)
             {
@@ -72,6 +72,19 @@ namespace CalSync.Synchronize
             File.Delete(tempFile);
 
             return events;
+        }
+
+        /// <summary>
+        /// We don't want to sync every single calendar event. Given a list of calendar events, return the ones we care about.
+        /// </summary>
+        /// <param name="calendarEvents">list of all calendar events</param>
+        /// <returns>filtered list of events</returns>
+        private static IEnumerable<IEvent> FilterCalendarEvents(IEnumerable<IEvent> calendarEvents)
+        {
+            return calendarEvents.Where(e =>
+                !(e.IsAllDay ||
+                  e.Summary == "Busy" ||
+                  e.Properties["X-MICROSOFT-CDO-BUSYSTATUS"].Value.ToString() == "FREE"));
         }
 
         /// <summary>
