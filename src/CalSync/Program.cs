@@ -22,9 +22,9 @@ namespace CalSync
         {
             // parse config from App.config
             Config cfg = Config.Read();
-            if(!cfg.ValidConfiguration)
+            if(cfg.ErrorMessage != null)
             {
-                WPF.MessageBox.Show("Error reading configuration. Please ensure CalSync.config contains valid values.");
+                WPF.MessageBox.Show("Error reading configuration. Please ensure CalSync.config contains valid values. Error Details: " + cfg.ErrorMessage);
                 return;
             }
 

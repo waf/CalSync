@@ -8,11 +8,11 @@ namespace CalSync.Infrastructure
 {
     class Config
     {
-        public bool ValidConfiguration { get; set; }
-        public int SyncRangeDays { get; set; }
-        public string TargetEmailAddress { get; set; }
-        public bool Receive { get; set; }
-        public bool Send { get; set; }
+        public int SyncRangeDays { get; private set; }
+        public string TargetEmailAddress { get; private set; }
+        public bool Receive { get; private set; }
+        public bool Send { get; private set; }
+        public String ErrorMessage { get; private set; }
 
         public static Config Read()
         {
@@ -22,9 +22,8 @@ namespace CalSync.Infrastructure
                 {
                     SyncRangeDays = int.Parse(ConfigurationManager.AppSettings["SyncRangeDays"]),
                     TargetEmailAddress = ConfigurationManager.AppSettings["TargetEmailAddress"],
-                    Receive = (ConfigurationManager.AppSettings["Receive"] == "1")? true:false,
-                    Send = (ConfigurationManager.AppSettings["Send"] == "1") ? true : false,
-                    ValidConfiguration = true
+                    Receive = bool.Parse(ConfigurationManager.AppSettings["Receive"] ?? "true"),
+                    Send = bool.Parse(ConfigurationManager.AppSettings["Send"] ?? "true"),
                 };
             } 
             catch(Exception e)
@@ -33,7 +32,7 @@ namespace CalSync.Infrastructure
                 {
                     return new Config()
                     {
-                        ValidConfiguration = false
+                        ErrorMessage = e.Message
                     };
                 }
                 throw;
