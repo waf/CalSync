@@ -11,6 +11,8 @@ namespace CalSync.Infrastructure
         public bool ValidConfiguration { get; set; }
         public int SyncRangeDays { get; set; }
         public string TargetEmailAddress { get; set; }
+        public bool Receive { get; set; }
+        public bool Send { get; set; }
 
         public static Config Read()
         {
@@ -20,6 +22,8 @@ namespace CalSync.Infrastructure
                 {
                     SyncRangeDays = int.Parse(ConfigurationManager.AppSettings["SyncRangeDays"]),
                     TargetEmailAddress = ConfigurationManager.AppSettings["TargetEmailAddress"],
+                    Receive = (ConfigurationManager.AppSettings["Receive"] == "1")? true:false,
+                    Send = (ConfigurationManager.AppSettings["Send"] == "1") ? true : false,
                     ValidConfiguration = true
                 };
             } 

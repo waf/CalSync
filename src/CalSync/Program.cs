@@ -38,13 +38,19 @@ namespace CalSync
                 return;
             }
 
-            // send sync message to remote inbox
             var rangeStart = DateTime.Now.Date;
             var rangeEnd = rangeStart.AddDays(cfg.SyncRangeDays);
-            Sender.SendSynchronizationMessage(calendar, rangeStart, rangeEnd, cfg.TargetEmailAddress, EmailSubject);
+            if (cfg.Send)
+            {
+                // send sync message to remote inbox
+                Sender.SendSynchronizationMessage(calendar, rangeStart, rangeEnd, cfg.TargetEmailAddress, EmailSubject);
+            }
 
-            // synchronize the calendar with messages in the local sync folder
-            Receiver.ProcessReceivedMessages(calendar, rangeStart, rangeEnd, setup.SyncFolder);
+            if (cfg.Receive)
+            {
+                // synchronize the calendar with messages in the local sync folder
+                Receiver.ProcessReceivedMessages(calendar, rangeStart, rangeEnd, setup.SyncFolder);
+            }
         }
     }
 }
