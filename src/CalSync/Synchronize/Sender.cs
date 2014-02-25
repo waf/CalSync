@@ -18,13 +18,13 @@ namespace CalSync.Synchronize
         /// <param name="remoteEmailAddress">The email address to send to</param>
         /// <param name="startDate">the beginning of the date range</param>
         /// <param name="endDate">the end of the date range</param>
-        internal static void SendSynchronizationMessage(MAPIFolder calendar, DateTime startDate, DateTime endDate, String remoteEmailAddress, String emailSubject)
+        internal static void SendSynchronizationMessage(MAPIFolder calendar, DateTime startDate, DateTime endDate, String remoteEmailAddress, String emailSubject, bool detailedAppointment)
         {
             string outputFile = Path.GetTempPath() + "calsync.ics";
             // send sync message to remote email address
-            var calendarEvents = ReadOutlookCalendarEvents(calendar, startDate, endDate);
+            var calendarEvents = ReadOutlookCalendarEvents(calendar, startDate, endDate, detailedAppointment);
             var eventsToSync = FilterCalendarEvents(calendarEvents);
-            var syncMessage = CreateSynchronizationMessage(eventsToSync, outputFile);
+            var syncMessage = CreateSynchronizationMessage(eventsToSync, outputFile, detailedAppointment);
             if (syncMessage != null)
             {
                 syncMessage.To = remoteEmailAddress;
@@ -46,7 +46,7 @@ namespace CalSync.Synchronize
         /// <param name="startDate">date range start</param>
         /// <param name="endDate">date range end</param>
         /// <returns>a list of events</returns>
-        private static IEnumerable<IEvent> ReadOutlookCalendarEvents(MAPIFolder calendar, DateTime startDate, DateTime endDate)
+        private static IEnumerable<IEvent> ReadOutlookCalendarEvents(MAPIFolder calendar, DateTime startDate, DateTime endDate, bool detailedAppointment)
         {
             // this implementation is a hack, but it's worth it not to get bogged down in the nasty
             // Outlook COM api (recurring appointments are particularly ugly). We export an iCal using 
@@ -56,7 +56,10 @@ namespace CalSync.Synchronize
             // Set the properties for the export. We export the subject so we can filter on it later. 
             // we don't include the subject in the end result.
             CalendarSharing exporter = calendar.GetCalendarExporter();
-            exporter.CalendarDetail = OlCalendarDetail.olFreeBusyAndSubject;
+            if (detailedAppointment)
+                exporter.CalendarDetail = OlCalendarDetail.olFullDetails;
+            else
+                exporter.CalendarDetail = OlCalendarDetail.olFreeBusyAndSubject;
             exporter.IncludeAttachments = false;
             exporter.IncludePrivateDetails = false;
             exporter.RestrictToWorkingHours = false;
@@ -92,7 +95,7 @@ namespace CalSync.Synchronize
         /// </summary>
         /// <param name="outputFile">the filename to read</param>
         /// <returns>The synchronization email message</returns>
-        private static MailItem CreateSynchronizationMessage(IEnumerable<IEvent> events, String outputFile)
+        private static MailItem CreateSynchronizationMessage(IEnumerable<IEvent> events, String outputFile, bool detailedAppointment)
         {
             MailItem mail = null;
             if (events.Count() != 0)
@@ -101,7 +104,7 @@ namespace CalSync.Synchronize
                 iCalendar target = new iCalendar();
                 foreach (var e in events)
                 {
-                    e.Summary = "Busy"; 
+                    if (!detailedAppointment) e.Summary = "Busy"; 
                     target.Events.Add(e);
                 }
 

@@ -43,7 +43,7 @@ namespace CalSync
             if (cfg.Send)
             {
                 // send sync message to remote inbox
-                Sender.SendSynchronizationMessage(calendar, rangeStart, rangeEnd, cfg.TargetEmailAddress, EmailSubject);
+                Sender.SendSynchronizationMessage(calendar, rangeStart, rangeEnd, cfg.TargetEmailAddress, EmailSubject, cfg.DetailedAppointment);
             }
 
             if (cfg.Receive)

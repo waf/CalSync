@@ -11,6 +11,7 @@ namespace CalSync.Infrastructure
         public int SyncRangeDays { get; private set; }
         public string TargetEmailAddress { get; private set; }
         public bool Receive { get; private set; }
+        public bool DetailedAppointment { get; private set; }
         public bool Send { get; private set; }
         public String ErrorMessage { get; private set; }
 
@@ -23,6 +24,7 @@ namespace CalSync.Infrastructure
                     SyncRangeDays = int.Parse(ConfigurationManager.AppSettings["SyncRangeDays"]),
                     TargetEmailAddress = ConfigurationManager.AppSettings["TargetEmailAddress"],
                     Receive = bool.Parse(ConfigurationManager.AppSettings["Receive"] ?? "true"),
+                    DetailedAppointment = bool.Parse(ConfigurationManager.AppSettings["DetailedAppointment"] ?? "true"),
                     Send = bool.Parse(ConfigurationManager.AppSettings["Send"] ?? "true"),
                 };
             } 
