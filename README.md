@@ -8,6 +8,8 @@ Configuration Options
 
 - TargetEmailAddress - The email address of the exchange account you want to send appointments to
 - SyncRangeDays - The number of days (from the current day) to synchronize.
+- Send - true/false - Should this computer send local calendar appointments to the target email address?
+- Receive - true/false - Should this computer process incoming calendar appointments and add them to the local calendar?
 
 Install / Setup
 ===============
